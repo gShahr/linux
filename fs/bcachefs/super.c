@@ -292,6 +292,7 @@ static void __bch2_fs_read_only(struct bch_fs *c)
 	 * After stopping journal:
 	 */
 	for_each_member_device(c, ca) {
+		pr_info("dev io ref stop WRITE; __bch2_fs_read_only");
 		bch2_dev_io_ref_stop(ca, WRITE);
 		bch2_dev_allocator_remove(c, ca);
 	}
@@ -309,6 +310,7 @@ static void bch2_writes_disabled(struct percpu_ref *writes)
 
 void bch2_fs_read_only(struct bch_fs *c)
 {
+	pr_info("the bit is %d", test_bit(BCH_FS_rw, &c->flags));
 	if (!test_bit(BCH_FS_rw, &c->flags)) {
 		bch2_journal_reclaim_stop(&c->journal);
 		return;
@@ -477,6 +479,7 @@ static int __bch2_fs_read_write(struct bch_fs *c, bool early)
 
 	__for_each_online_member(c, ca, BIT(BCH_MEMBER_STATE_rw), READ) {
 		bch2_dev_allocator_add(c, ca);
+		pr_info("Ref reinit; 485");
 		percpu_ref_reinit(&ca->io_ref[WRITE]);
 	}
 	bch2_recalc_capacity(c);
@@ -634,6 +637,7 @@ void __bch2_fs_stop(struct bch_fs *c)
 	set_bit(BCH_FS_stopping, &c->flags);
 
 	down_write(&c->state_lock);
+	pr_info("Making fs read only; __bch2_fs_stop");
 	bch2_fs_read_only(c);
 	up_write(&c->state_lock);
 
@@ -678,6 +682,7 @@ void bch2_fs_free(struct bch_fs *c)
 		struct bch_dev *ca = rcu_dereference_protected(c->devs[i], true);
 
 		if (ca) {
+			pr_info("Currently freeing %dth device; bch2_fs_free", i);
 			EBUG_ON(atomic_long_read(&ca->ref) != 1);
 			bch2_dev_io_ref_stop(ca, READ);
 			bch2_free_super(&ca->disk_sb);
@@ -1201,6 +1206,7 @@ static int bch2_dev_in_fs(struct bch_sb_handle *fs,
 static void bch2_dev_io_ref_stop(struct bch_dev *ca, int rw)
 {
 	if (!percpu_ref_is_zero(&ca->io_ref[rw])) {
+		pr_info("Killing something; bch2_dev_io_ref_stop");
 		reinit_completion(&ca->io_ref_completion[rw]);
 		percpu_ref_kill(&ca->io_ref[rw]);
 		wait_for_completion(&ca->io_ref_completion[rw]);
@@ -1216,6 +1222,7 @@ static void bch2_dev_release(struct kobject *kobj)
 
 static void bch2_dev_free(struct bch_dev *ca)
 {
+	pr_info("warn_on for ref count; 1231");
 	WARN_ON(!percpu_ref_is_zero(&ca->io_ref[WRITE]));
 	WARN_ON(!percpu_ref_is_zero(&ca->io_ref[READ]));
 
@@ -1237,6 +1244,7 @@ static void bch2_dev_free(struct bch_dev *ca)
 	bch2_time_stats_quantiles_exit(&ca->io_latency[WRITE]);
 	bch2_time_stats_quantiles_exit(&ca->io_latency[READ]);
 
+	pr_info("percpu ref exit; 1253");
 	percpu_ref_exit(&ca->io_ref[WRITE]);
 	percpu_ref_exit(&ca->io_ref[READ]);
 #ifndef CONFIG_BCACHEFS_DEBUG
@@ -1385,6 +1393,7 @@ static struct bch_dev *__bch2_dev_alloc(struct bch_fs *c,
 
 	return ca;
 err:
+	pr_info("bad dev alloc; __bch2_dev_alloc");
 	bch2_dev_free(ca);
 	return NULL;
 }
@@ -1608,8 +1617,10 @@ static void __bch2_dev_read_write(struct bch_fs *c, struct bch_dev *ca)
 	bch2_dev_allocator_add(c, ca);
 	bch2_recalc_capacity(c);
 
-	if (percpu_ref_is_zero(&ca->io_ref[WRITE]))
+	if (percpu_ref_is_zero(&ca->io_ref[WRITE])) {
+		pr_info("percpu ref reinit; 1626");
 		percpu_ref_reinit(&ca->io_ref[WRITE]);
+	}
 
 	bch2_dev_do_discards(ca);
 }
