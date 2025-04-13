@@ -509,6 +509,8 @@ struct bio *bio_alloc_bioset(struct block_device *bdev, unsigned short nr_vecs,
 	void *p;
 
 	/* should not use nobvec bioset for nr_vecs > 0 */
+	pr_info("Mempool: %d\n", mempool_initialized(&bs->bvec_pool));
+	pr_info("nr_vecs: %d\n", nr_vecs);
 	if (WARN_ON_ONCE(!mempool_initialized(&bs->bvec_pool) && nr_vecs > 0))
 		return NULL;
 
