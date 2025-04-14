@@ -67,23 +67,6 @@ static int ad7816_spi_read(struct ad7816_chip_info *chip, u16 *data)
 	int ret;
 	__be16 buf;
 
-	gpiod_set_value(chip->rdwr_pin, 1);
-	gpiod_set_value(chip->rdwr_pin, 0);
-	ret = spi_write(spi_dev, &chip->channel_id, sizeof(chip->channel_id));
-	if (ret < 0) {
-		dev_err(&spi_dev->dev, "SPI channel setting error\n");
-		return ret;
-	}
-	gpiod_set_value(chip->rdwr_pin, 1);
-
-	if (chip->mode == AD7816_PD) { /* operating mode 2 */
-		gpiod_set_value(chip->convert_pin, 1);
-		gpiod_set_value(chip->convert_pin, 0);
-	} else { /* operating mode 1 */
-		gpiod_set_value(chip->convert_pin, 0);
-		gpiod_set_value(chip->convert_pin, 1);
-	}
-
 	if (chip->id == ID_AD7816 || chip->id == ID_AD7817) {
 		while (gpiod_get_value(chip->busy_pin))
 			cpu_relax();
