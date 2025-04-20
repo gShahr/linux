@@ -197,7 +197,13 @@ static ssize_t ad9832_write_powerdown(struct iio_dev *indio_dev, uintptr_t priva
 					  st->ctrl_src);
 	ret = spi_sync(st->spi, &st->msg);
 
+<<<<<<< HEAD
 	return ret ? ret : len;
+=======
+unlock:
+	mutex_unlock(&st->lock);
+	return len;
+>>>>>>> 7cf1eb0afb11b (staging: iio: ad9832: Add minor improvements to ad9832_write_powerdown)
 }
 
 static ssize_t ad9832_write(struct device *dev, struct device_attribute *attr,
